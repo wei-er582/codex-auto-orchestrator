@@ -50,6 +50,7 @@ class EngineTests(unittest.TestCase):
     def test_direct_flow(self) -> None:
         store = self.orchestrator().run("MODE=direct inspect")
         self.assertEqual(store.read()["status"], "complete")
+        self.assertFalse(_job_temp_root(store).exists())
         plan = json.loads((store.job_dir / "plan.json").read_text(encoding="utf-8"))
         self.assertEqual(plan["execution_mode"], "direct")
         if os.name == "nt":
@@ -93,6 +94,7 @@ class EngineTests(unittest.TestCase):
             ["git", "-C", str(self.workspace), "worktree", "list", "--porcelain"], text=True
         )
         self.assertEqual(worktree_lines.count("worktree "), 1)
+        self.assertFalse(_job_temp_root(store).exists())
         status = subprocess.check_output(["git", "-C", str(self.workspace), "status", "--porcelain"], text=True)
         self.assertEqual(status, "")
 
@@ -203,6 +205,7 @@ class EngineTests(unittest.TestCase):
             text=True,
         )
         self.assertEqual(branches.strip(), "")
+        self.assertFalse(_job_temp_root(holder["store"]).exists())
 
     def test_implementation_failure_retries_at_higher_reasoning(self) -> None:
         store = self.orchestrator().run("MODE=direct FAIL_IMPLEMENTATION")
@@ -221,6 +224,14 @@ class EngineTests(unittest.TestCase):
         self.assertTrue((snapshot_root / "read-snapshot" / "unauthorized.txt").is_file())
         self.assertIn("isolated workspaces contain changes", " ".join(store.read()["blockers"]))
         shutil.rmtree(snapshot_root)
+        try:
+            snapshot_root.parent.rmdir()
+        except OSError:
+            pass
+
+
+def _job_temp_root(store: JobStore) -> Path:
+    return Path(tempfile.gettempdir()) / "codex-auto-orchestrator" / store.job_id
 
 
 if __name__ == "__main__":

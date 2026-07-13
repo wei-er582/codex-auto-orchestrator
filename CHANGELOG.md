@@ -9,6 +9,11 @@ supersedes: []
 
 # Changelog
 
+## 0.1.2 - 2026-07-13
+
+- Removed empty per-job temporary directories after clean snapshot and worktree cleanup.
+- Added regression assertions for successful and cancelled orchestration cleanup.
+
 ## 0.1.1 - 2026-07-13
 
 - Aligned structured-output schemas with runtime identifier validation.

@@ -153,7 +153,25 @@ class WorkspaceManager:
                 if resolved.parent != temp_root:
                     raise RuntimeError(f"refusing to remove read snapshot outside temp root: {resolved}")
                 shutil.rmtree(resolved)
+        self._remove_empty_temp_root(preserved)
         return preserved
+
+    def _remove_empty_temp_root(self, preserved: list[str]) -> None:
+        orchestrator_temp = (Path(tempfile.gettempdir()) / "codex-auto-orchestrator").resolve()
+        resolved = self.temp_root.resolve()
+        if resolved.parent != orchestrator_temp:
+            raise RuntimeError(f"refusing to remove unexpected job temp root: {resolved}")
+        if resolved.exists():
+            if any(resolved.iterdir()):
+                if not preserved:
+                    preserved.append(str(resolved))
+                return
+            resolved.rmdir()
+        try:
+            orchestrator_temp.rmdir()
+        except OSError:
+            # Other concurrent or preserved jobs may still own the shared parent.
+            pass
 
 
 def _tree_digest(root: Path) -> str:
