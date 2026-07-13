@@ -4,7 +4,7 @@
   "additionalProperties": false,
   "required": ["task_id", "status", "summary", "changed_files", "tests", "commit", "artifacts", "blockers", "uncertainties", "failure_kind"],
   "properties": {
-    "task_id": {"type": "string"},
+    "task_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"},
     "status": {"type": "string", "enum": ["success", "failed", "blocked", "cancelled"]},
     "summary": {"type": "string"},
     "changed_files": {"type": "array", "items": {"type": "string"}},

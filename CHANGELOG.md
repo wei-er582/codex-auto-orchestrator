@@ -9,6 +9,12 @@ supersedes: []
 
 # Changelog
 
+## 0.1.1 - 2026-07-13
+
+- Aligned structured-output schemas with runtime identifier validation.
+- Accepted safe lowercase underscore identifiers such as `wave_1` while preserving filename and branch safety.
+- Added planner guidance and regression coverage for wave, task, dependency, result, and review identifiers.
+
 ## 0.1.0 - 2026-07-13
 
 - Added automatic Sol Max planning and model-aware Direct, Orchestrated, and Native Ultra execution.

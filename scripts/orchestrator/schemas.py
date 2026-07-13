@@ -11,6 +11,9 @@ class ValidationError(ValueError):
     pass
 
 
+ID_PATTERN = r"^[a-z0-9][a-z0-9_-]{0,63}$"
+
+
 REQUIRED_RESULT_FIELDS = {
     "task_id",
     "status",
@@ -256,7 +259,7 @@ def _exact_fields(value: dict[str, Any], expected: set[str], label: str) -> None
 
 
 def _valid_id(value: Any) -> bool:
-    return isinstance(value, str) and re.fullmatch(r"[a-z0-9][a-z0-9-]{0,63}", value) is not None
+    return isinstance(value, str) and re.fullmatch(ID_PATTERN, value) is not None
 
 
 def _string_array(value: Any) -> bool:

@@ -17,7 +17,7 @@
         "additionalProperties": false,
         "required": ["id", "tasks"],
         "properties": {
-          "id": {"type": "string"},
+          "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"},
           "tasks": {
             "type": "array",
             "items": {
@@ -25,12 +25,12 @@
               "additionalProperties": false,
               "required": ["id", "title", "objective", "model", "reasoning", "depends_on", "access", "allowed_paths", "acceptance", "timeout_seconds"],
               "properties": {
-                "id": {"type": "string"},
+                "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"},
                 "title": {"type": "string"},
                 "objective": {"type": "string"},
                 "model": {"type": "string"},
                 "reasoning": {"type": "string", "enum": ["low", "medium", "high", "xhigh", "max", "ultra"]},
-                "depends_on": {"type": "array", "items": {"type": "string"}},
+                "depends_on": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"}},
                 "access": {"type": "string", "enum": ["read", "write"]},
                 "allowed_paths": {"type": "array", "items": {"type": "string"}},
                 "acceptance": {"type": "array", "items": {"type": "string"}},

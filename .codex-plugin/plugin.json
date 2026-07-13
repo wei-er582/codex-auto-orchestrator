@@ -1,6 +1,6 @@
 {
   "name": "codex-auto-orchestrator",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Automatically plan, route, execute, review, and integrate Codex tasks across Sol, Terra, and Ultra reasoning modes.",
   "author": {
     "name": "Samsung"

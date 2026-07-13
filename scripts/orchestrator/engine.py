@@ -748,6 +748,7 @@ Rules:
 - Use allowed_paths to narrow write scope. Use an empty array only when scope cannot be narrowed.
 - final_review must use a non-Ultra model. Require it for orchestrated, native-ultra, or medium-and-higher risk work.
 - Set permissions true only when the original task explicitly authorizes them.
+- Every wave ID, task ID, and dependency ID must be a lowercase ASCII identifier matching ^[a-z0-9][a-z0-9_-]{{0,63}}$.
 - Each task needs concrete acceptance criteria and a timeout from 60 to 14400 seconds.
 - Do not invoke plugins, other Codex CLI sessions, or subagents while planning.
 

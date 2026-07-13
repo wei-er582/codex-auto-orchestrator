@@ -26,7 +26,7 @@ supersedes: []
 
 ## Intentional limitations
 
-- Version 0.1.0 does not expose MCP controls or a graphical task tree.
+- Version 0.1.x does not expose MCP controls or a graphical task tree.
 - Native Ultra is exclusive within its wave; recursive external orchestration is blocked.
 - Dirty or non-Git workspaces serialize write tasks instead of attempting unsafe parallel merging.
 - A failed run removes clean temporary worktrees but preserves non-clean worktrees for inspection rather than discarding unique changes.

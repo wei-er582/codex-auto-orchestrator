@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -8,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from orchestrator.model_catalog import ModelCatalog
-from orchestrator.schemas import ValidationError, validate_plan
+from orchestrator.schemas import ID_PATTERN, ValidationError, validate_plan
 from orchestrator.util import uses_chatgpt_login
 
 
@@ -87,6 +88,32 @@ class ModelCatalogTests(unittest.TestCase):
         validated = validate_plan(plan, catalog, 3)
         self.assertEqual(validated["final_review"]["model"], "gpt-5.6-sol")
         self.assertEqual(validated["final_review"]["reasoning"], "max")
+
+    def test_lowercase_underscore_identifiers_are_valid(self) -> None:
+        catalog = ModelCatalog.discover(self.fake)
+        plan = _plan([_worker("tests_audit"), _worker("docs_audit")])
+        plan["waves"][0]["id"] = "wave_1"
+        validated = validate_plan(plan, catalog, 3)
+        self.assertEqual(validated["waves"][0]["id"], "wave_1")
+
+    def test_output_schemas_share_the_runtime_identifier_pattern(self) -> None:
+        plan_schema = json.loads(
+            (ROOT / "scripts" / "schemas" / "plan.schema.json").read_text(encoding="utf-8")
+        )
+        result_schema = json.loads(
+            (ROOT / "scripts" / "schemas" / "result.schema.json").read_text(encoding="utf-8")
+        )
+        review_schema = json.loads(
+            (ROOT / "scripts" / "schemas" / "review.schema.json").read_text(encoding="utf-8")
+        )
+        wave_properties = plan_schema["properties"]["waves"]["items"]["properties"]
+        task_properties = wave_properties["tasks"]["items"]["properties"]
+        assessment_properties = review_schema["properties"]["task_assessments"]["items"]["properties"]
+        self.assertEqual(wave_properties["id"]["pattern"], ID_PATTERN)
+        self.assertEqual(task_properties["id"]["pattern"], ID_PATTERN)
+        self.assertEqual(task_properties["depends_on"]["items"]["pattern"], ID_PATTERN)
+        self.assertEqual(result_schema["properties"]["task_id"]["pattern"], ID_PATTERN)
+        self.assertEqual(assessment_properties["task_id"]["pattern"], ID_PATTERN)
 
 
 def _worker(task_id: str) -> dict:

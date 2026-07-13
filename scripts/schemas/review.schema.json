@@ -14,7 +14,7 @@
         "additionalProperties": false,
         "required": ["task_id", "status", "findings", "repair_instructions"],
         "properties": {
-          "task_id": {"type": "string"},
+          "task_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"},
           "status": {"type": "string", "enum": ["pass", "repair", "blocked"]},
           "findings": {"type": "array", "items": {"type": "string"}},
           "repair_instructions": {"type": "array", "items": {"type": "string"}}
