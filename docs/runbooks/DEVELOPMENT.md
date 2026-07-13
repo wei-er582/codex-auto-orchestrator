@@ -1,6 +1,6 @@
 ---
 status: active
-owner: Samsung
+owner: wei-er582
 last_verified: 2026-07-13
 verified_commit: "codex-auto-orchestrator@initial-implementation-2026-07-13"
 applies_to: [codex-auto-orchestrator]

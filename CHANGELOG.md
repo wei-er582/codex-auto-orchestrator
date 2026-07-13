@@ -1,6 +1,6 @@
 ---
 status: active
-owner: Samsung
+owner: wei-er582
 last_verified: 2026-07-13
 verified_commit: "codex-auto-orchestrator@initial-implementation-2026-07-13"
 applies_to: [codex-auto-orchestrator]
@@ -8,6 +8,11 @@ supersedes: []
 ---
 
 # Changelog
+
+## Unreleased
+
+- Published the project as open source under the name Codex Auto Orchestrator.
+- Added a comprehensive public README, repository metadata, and public installation guidance.
 
 ## 0.1.2 - 2026-07-13
 
