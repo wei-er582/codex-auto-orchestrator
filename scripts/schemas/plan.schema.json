@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "summary", "complexity", "risk", "execution_mode", "rationale", "waves", "final_review", "permissions"],
+  "properties": {
+    "version": {"type": "integer", "enum": [1]},
+    "summary": {"type": "string"},
+    "complexity": {"type": "string", "enum": ["S1", "S2", "S3", "S4"]},
+    "risk": {"type": "string", "enum": ["low", "medium", "high", "critical"]},
+    "execution_mode": {"type": "string", "enum": ["direct", "orchestrated", "native-ultra"]},
+    "rationale": {"type": "string"},
+    "waves": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "tasks"],
+        "properties": {
+          "id": {"type": "string"},
+          "tasks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "title", "objective", "model", "reasoning", "depends_on", "access", "allowed_paths", "acceptance", "timeout_seconds"],
+              "properties": {
+                "id": {"type": "string"},
+                "title": {"type": "string"},
+                "objective": {"type": "string"},
+                "model": {"type": "string"},
+                "reasoning": {"type": "string", "enum": ["low", "medium", "high", "xhigh", "max", "ultra"]},
+                "depends_on": {"type": "array", "items": {"type": "string"}},
+                "access": {"type": "string", "enum": ["read", "write"]},
+                "allowed_paths": {"type": "array", "items": {"type": "string"}},
+                "acceptance": {"type": "array", "items": {"type": "string"}},
+                "timeout_seconds": {"type": "integer"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "final_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "model", "reasoning", "acceptance"],
+      "properties": {
+        "required": {"type": "boolean"},
+        "model": {"type": "string"},
+        "reasoning": {"type": "string", "enum": ["low", "medium", "high", "xhigh", "max"]},
+        "acceptance": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit", "push", "deploy", "external_write"],
+      "properties": {
+        "commit": {"type": "boolean"},
+        "push": {"type": "boolean"},
+        "deploy": {"type": "boolean"},
+        "external_write": {"type": "boolean"}
+      }
+    }
+  }
+}

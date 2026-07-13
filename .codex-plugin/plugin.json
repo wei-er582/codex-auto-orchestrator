@@ -1,0 +1,21 @@
+{
+  "name": "codex-auto-orchestrator",
+  "version": "0.1.0",
+  "description": "Automatically plan, route, execute, review, and integrate Codex tasks across Sol, Terra, and Ultra reasoning modes.",
+  "author": {
+    "name": "Samsung"
+  },
+  "repository": "https://github.com/wei-er582/codex-auto-orchestrator",
+  "license": "MIT",
+  "keywords": ["codex", "orchestration", "multi-agent", "model-routing"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Codex Auto Orchestrator",
+    "shortDescription": "Automatically route complex tasks to the right Codex model.",
+    "longDescription": "Plans substantial tasks with Sol Max, selects direct, parallel, or native Ultra execution, monitors workers, validates results, and integrates the final outcome.",
+    "developerName": "Samsung",
+    "category": "Productivity",
+    "capabilities": ["Interactive", "Write"],
+    "defaultPrompt": "自动编排完成这个任务："
+  }
+}

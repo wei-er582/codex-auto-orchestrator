@@ -1,0 +1,6 @@
+interface:
+  display_name: "Automatic Model Orchestration"
+  short_description: "Plan, route, execute, review, and integrate complex tasks"
+  default_prompt: "Use $auto-orchestrate-task to automatically plan, route, execute, review, and integrate this task."
+policy:
+  allow_implicit_invocation: true

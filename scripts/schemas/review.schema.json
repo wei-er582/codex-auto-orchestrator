@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["approved", "status", "summary", "task_assessments", "findings", "changed_files", "tests", "integration_commit", "blockers", "merge_decision"],
+  "properties": {
+    "approved": {"type": "boolean"},
+    "status": {"type": "string", "enum": ["success", "failed", "blocked"]},
+    "summary": {"type": "string"},
+    "task_assessments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["task_id", "status", "findings", "repair_instructions"],
+        "properties": {
+          "task_id": {"type": "string"},
+          "status": {"type": "string", "enum": ["pass", "repair", "blocked"]},
+          "findings": {"type": "array", "items": {"type": "string"}},
+          "repair_instructions": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "findings": {"type": "array", "items": {"type": "string"}},
+    "changed_files": {"type": "array", "items": {"type": "string"}},
+    "tests": {"type": "array", "items": {"type": "string"}},
+    "integration_commit": {"type": "string"},
+    "blockers": {"type": "array", "items": {"type": "string"}},
+    "merge_decision": {"type": "string", "enum": ["approve", "repair", "block"]}
+  }
+}

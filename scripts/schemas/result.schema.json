@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["task_id", "status", "summary", "changed_files", "tests", "commit", "artifacts", "blockers", "uncertainties", "failure_kind"],
+  "properties": {
+    "task_id": {"type": "string"},
+    "status": {"type": "string", "enum": ["success", "failed", "blocked", "cancelled"]},
+    "summary": {"type": "string"},
+    "changed_files": {"type": "array", "items": {"type": "string"}},
+    "tests": {"type": "array", "items": {"type": "string"}},
+    "commit": {"type": "string"},
+    "artifacts": {"type": "array", "items": {"type": "string"}},
+    "blockers": {"type": "array", "items": {"type": "string"}},
+    "uncertainties": {"type": "array", "items": {"type": "string"}},
+    "failure_kind": {"type": "string", "enum": ["none", "environment", "permission", "implementation", "reasoning", "coordination", "timeout", "cancelled"]}
+  }
+}
