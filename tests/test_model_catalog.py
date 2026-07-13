@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from orchestrator.model_catalog import ModelCatalog
+from orchestrator.engine import _plan_schema_for_catalog
 from orchestrator.schemas import ID_PATTERN, ValidationError, validate_plan
 from orchestrator.util import uses_chatgpt_login
 
@@ -35,6 +36,49 @@ class ModelCatalogTests(unittest.TestCase):
             }
         )
         self.assertEqual(catalog.preferred_sol(), "gpt-5.7-sol")
+
+    def test_missing_family_is_not_silently_replaced_by_the_other_family(self) -> None:
+        catalog = ModelCatalog.from_payload(
+            {
+                "models": [
+                    {
+                        "slug": "gpt-5.6-terra",
+                        "supported_reasoning_levels": [
+                            {"effort": effort}
+                            for effort in ("low", "medium", "high", "xhigh", "max", "ultra")
+                        ],
+                    }
+                ]
+            }
+        )
+        with self.assertRaisesRegex(ValueError, "no available Sol model"):
+            catalog.preferred_sol()
+
+    def test_runtime_plan_schema_includes_catalog_reasoning_levels_without_hardcoding(self) -> None:
+        catalog = ModelCatalog.from_payload(
+            {
+                "models": [
+                    {
+                        "slug": family,
+                        "supported_reasoning_levels": [
+                            {"effort": effort}
+                            for effort in ("low", "medium", "max", "ultra", "future-level")
+                        ],
+                    }
+                    for family in ("gpt-5.6-sol", "gpt-5.6-terra")
+                ]
+            }
+        )
+        schema = _plan_schema_for_catalog(catalog)
+        task_reasoning = schema["properties"]["waves"]["items"]["properties"]["tasks"][
+            "items"
+        ]["properties"]["reasoning"]["enum"]
+        review_reasoning = schema["properties"]["final_review"]["properties"]["reasoning"][
+            "enum"
+        ]
+        self.assertIn("future-level", task_reasoning)
+        self.assertIn("future-level", review_reasoning)
+        self.assertNotIn("ultra", review_reasoning)
 
     def test_rejects_ultra_inside_orchestrated_mode(self) -> None:
         catalog = ModelCatalog.discover(self.fake)
@@ -106,6 +150,11 @@ class ModelCatalogTests(unittest.TestCase):
         review_schema = json.loads(
             (ROOT / "scripts" / "schemas" / "review.schema.json").read_text(encoding="utf-8")
         )
+        external_schema = json.loads(
+            (ROOT / "scripts" / "schemas" / "external-verification.schema.json").read_text(
+                encoding="utf-8"
+            )
+        )
         wave_properties = plan_schema["properties"]["waves"]["items"]["properties"]
         task_properties = wave_properties["tasks"]["items"]["properties"]
         assessment_properties = review_schema["properties"]["task_assessments"]["items"]["properties"]
@@ -114,6 +163,7 @@ class ModelCatalogTests(unittest.TestCase):
         self.assertEqual(task_properties["depends_on"]["items"]["pattern"], ID_PATTERN)
         self.assertEqual(result_schema["properties"]["task_id"]["pattern"], ID_PATTERN)
         self.assertEqual(assessment_properties["task_id"]["pattern"], ID_PATTERN)
+        self.assertEqual(external_schema["properties"]["task_id"]["pattern"], ID_PATTERN)
 
 
 def _worker(task_id: str) -> dict:

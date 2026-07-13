@@ -1,7 +1,7 @@
 {
   "name": "codex-auto-orchestrator",
-  "version": "0.1.2+codex.20260713162507",
-  "description": "Automatically plan, route, execute, review, and integrate Codex tasks across Sol, Terra, and Ultra reasoning modes.",
+  "version": "0.2.0+codex.20260713191557",
+  "description": "Plan substantial Codex tasks with Sol Max, route Sol/Terra/Ultra workers, control Fast per reasoning level, and recover durable background jobs with observed-call evidence.",
   "author": {
     "name": "wei-er582"
   },
@@ -11,13 +11,15 @@
     "codex",
     "orchestration",
     "multi-agent",
-    "model-routing"
+    "model-routing",
+    "fast-mode",
+    "task-recovery"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Codex Auto Orchestrator",
-    "shortDescription": "Automatically route complex tasks to the right Codex model.",
-    "longDescription": "Plans substantial tasks with Sol Max, selects direct, parallel, or native Ultra execution, monitors workers, validates results, and integrates the final outcome.",
+    "shortDescription": "Route Sol, Terra, Ultra, and Fast with durable controls.",
+    "longDescription": "Resolves a per-model Fast policy before Sol Max planning, selects direct, parallel, or native Ultra execution, runs a temporary recoverable controller, accepts steering and pause/resume controls, verifies actual model/reasoning plus explicit and observable Service Tier evidence, and integrates the reviewed result.",
     "developerName": "wei-er582",
     "category": "Productivity",
     "capabilities": [

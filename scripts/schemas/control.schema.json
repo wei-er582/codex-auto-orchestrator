@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/wei-er582/codex-auto-orchestrator/schemas/control.schema.json",
+  "title": "Codex Auto Orchestrator control queue",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "next_seq", "requests"],
+  "properties": {
+    "version": {"const": 1},
+    "next_seq": {"type": "integer", "minimum": 1},
+    "requests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["seq", "request_id", "kind", "source_thread_id", "boundary", "payload", "status", "created_at", "applied_at", "result"],
+        "properties": {
+          "seq": {"type": "integer", "minimum": 1},
+          "request_id": {"type": "string", "minLength": 1},
+          "kind": {"enum": ["cancel", "pause", "resume", "steer", "speed-change"]},
+          "source_thread_id": {"type": "string"},
+          "boundary": {"enum": ["safe", "immediate"]},
+          "payload": {"type": "object"},
+          "status": {"enum": ["pending", "applied", "rejected", "superseded"]},
+          "created_at": {"type": "string", "minLength": 1},
+          "applied_at": {"type": "string"},
+          "result": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

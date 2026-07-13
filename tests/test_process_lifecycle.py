@@ -64,9 +64,8 @@ class ProcessLifecycleTests(unittest.TestCase):
         while time.time() < deadline and not self.store.read()["processes"]:
             time.sleep(0.05)
         self.assertTrue(self.store.read()["processes"])
-        killed = self.store.request_cancel()
+        self.store.request_cancel()
         thread.join(timeout=10)
         self.assertFalse(thread.is_alive())
-        self.assertTrue(killed)
         self.assertTrue(result["outcome"].cancelled)
         self.assertEqual(self.store.read()["processes"], {})

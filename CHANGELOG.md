@@ -2,17 +2,22 @@
 status: active
 owner: wei-er582
 last_verified: 2026-07-14
-verified_commit: "codex-auto-orchestrator@initial-implementation-2026-07-13"
+verified_commit: "codex-auto-orchestrator@v0.2.0"
 applies_to: [codex-auto-orchestrator]
 supersedes: []
 ---
 
 # Changelog
 
-## Unreleased
+## 0.2.0 - 2026-07-14
 
-- Published the project as open source under the name Codex Auto Orchestrator.
-- Added a comprehensive public README, repository metadata, and public installation guidance.
+- Added dynamic Sol/Terra Fast matrices, immutable job snapshots, named profiles, four built-in templates, first-use and model-catalog-change gates, and a secured one-shot local configuration page.
+- Added text fallback, profile CLI management, explicit Standard overrides, runtime speed revisions, and Fast-to-Standard fallback evidence.
+- Replaced foreground-only execution with per-job temporary background controllers, leases, heartbeats, atomic controls, pause/resume, steering, linked follow-ups, and crash-safe Codex session continuation.
+- Upgraded state to version 2 with origin thread, parent job, desired status, checkpoints, plan revisions, speed revisions, workspace resources, control sequence, and external-action records; terminal v0.1 jobs remain readable.
+- Extended clean-Git worktree isolation to Direct and Native Ultra writes, made integration idempotent, preserved integration work when the original branch advances, and authenticated process cleanup by PID birth identity plus job marker.
+- Added hard runtime verification for model/reasoning, exact CLI Service Tier override proof, backend-tier observation when the CLI exposes it, and explicit `not_exposed` compatibility evidence when it does not; uncertain external writes are not mechanically retried.
+- Expanded public commands, schemas, documentation, ADRs, fake-runner coverage, and real-release acceptance requirements.
 
 ## 0.1.2 - 2026-07-13
 

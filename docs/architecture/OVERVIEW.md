@@ -2,7 +2,7 @@
 status: active
 owner: wei-er582
 last_verified: 2026-07-14
-verified_commit: "codex-auto-orchestrator@initial-implementation-2026-07-13"
+verified_commit: "codex-auto-orchestrator@v0.2.0"
 applies_to: [codex-auto-orchestrator]
 supersedes: []
 ---
@@ -10,36 +10,64 @@ supersedes: []
 # Architecture
 
 ```text
-Skill or CLI
+Skill / CLI entry
+    |
+    +-- classify new task or control for an existing workspace job
+    |
+    +-- discover Sol/Terra catalog
+    +-- resolve named speed profile or wait before any model call
     |
     v
-Sol Max read-only planner -- plan schema -- policy validator
-    |
-    +--> Direct worker
-    +--> Bounded parallel workers and Git worktrees
-    +--> One native Sol/Terra Ultra worker
+Per-job temporary controller -- lease -- heartbeat -- checkpoint -- control queue
     |
     v
-Fresh Sol Max reviewer/integrator -- per-task review schema
-    |                                  |
-    +-- one targeted task repair <-----+
+Sol Max read-only planner -- output schema -- runtime plan validator
     |
-    +-- approved safe fast-forward
+    +--> Direct worker in one isolated location
+    +--> Dependency-ordered ordinary worker waves, max 3
+    +--> One exclusive native Sol/Terra Ultra worker
+    |
+    +--> pause / steer / speed revision / safe resume at boundaries
     |
     v
-State, invocation evidence, report, and cleanup
+Fresh Sol Max reviewer and integrator -- targeted repair at most once
+    |
+    +--> idempotent approved fast-forward or preserved integration branch
+    |
+    v
+Observed model/reasoning + requested/observable tier evidence -- report -- safe cleanup
 ```
 
-The Python engine is the authority for execution state and safety policy. Model-generated plans cannot exceed current model availability, concurrency, Ultra, workspace, or permission ceilings.
+The Python engine is the authority for state and safety. A model-generated plan cannot exceed current model availability, supported reasoning, concurrency, Ultra, workspace, or original permission ceilings.
 
-Each Codex subprocess receives task text through stdin and uses an argument array, so shell interpolation cannot reinterpret user input. Child processes disable plugins and carry `CODEX_AUTO_ORCHESTRATOR_WORKER=1` to prevent recursive orchestration.
+## Speed before planning
 
-For a clean Git repository, each parallel write task receives a branch and worktree at the baseline revision. A fresh integration branch merges approved worker commits, runs final review, and advances the original branch only when its HEAD and cleanliness still match the baseline. Unknown modifications stop integration and remain preserved.
+The catalog is discovered before any model invocation. A saved profile is compared with the current model-version/effort combinations. First use or a new combination changes state to `waiting_for_speed`; the Planner cannot start without a complete `speed-policy.json`. The snapshot records model bindings, matrix, catalog fingerprint, known combinations, source, and revision.
 
-On Windows, read-only executors and reviewers use one shared disposable snapshot rather than the standalone CLI read-only sandbox. A clean Git repository uses a detached worktree; dirty Git and non-Git workspaces are copied. The engine fingerprints every non-Git-metadata file before execution and blocks while preserving evidence if any content changes. The original workspace is never the write target for a read task.
+Every call performs a fresh lookup by actual model family and reasoning. Thus a Terra High worker, a Sol XHigh retry, Sol Ultra, and the Sol Max Reviewer can use different Service Tiers. A runtime update replaces only the job snapshot at a safe boundary and increments its revision.
 
-Runtime evidence is stored outside target projects. `state.json` is atomically replaced under a cross-process file lock, so a separate `cancel` process cannot lose concurrent PID or task updates. Active child PIDs remain visible to cancellation, which terminates their process trees before clean worktrees and branches are removed.
+## Controller and durable recovery
 
-The JSON event stream identifies each Codex thread. The runner resolves that thread to its session rollout and reads only authoritative `turn_context` records to verify the actual model and reasoning effort. Plan labels alone are never treated as routing proof.
+`start` creates state first, then launches one detached controller. The controller owns a non-blocking file lease and updates its PID birth identity and heartbeat. `control.json` is an atomic queue ordered as cancel, pause, steering/speed, then resume. The engine checkpoints completed waves and saves a session ID as soon as `thread.started` appears.
 
-See [ADR 0002](adr/0002-windows-read-snapshot-isolation.md) for the Windows isolation decision.
+After a controller crash, a new controller authenticates leftover processes by both birth identity and job-specific command marker. A compatible task resumes with `codex exec resume`. If no session exists, only an intact isolated worktree with no uncertain external action may be continued in a fresh worker. Paused controllers exit after the configured idle interval but keep the same `job_id` and checkpoint.
+
+## Process and evidence boundary
+
+Task text and steering instructions travel through stdin or UTF-8 files. Subprocess commands are argument arrays. Children disable plugins and carry `CODEX_AUTO_ORCHESTRATOR_WORKER=1` to block recursive entry.
+
+Each call explicitly passes model, `model_reasoning_effort`, and `service_tier`. The JSON stream yields the thread ID; the runner reads `turn_context` and local thread settings from the session rollout. Successful work requires observed model and reasoning to match. The runner separately proves the exact CLI tier override, records a backend match or Fast-to-Standard degradation when a completion event exposes it, and otherwise marks the backend tier `not_exposed`.
+
+This separation is deliberate. Codex CLI 0.144.0 forwards `service_tier` in the Responses request but discards `response.service_tier` while reducing `response.completed` to response ID, usage, and end-turn state. Therefore local thread settings prove configuration, not the backend result. Release-only sanitized WebSocket inspection can audit that boundary, but the plugin does not bundle a TLS interception proxy or fabricate an observation. Plan labels are never proof.
+
+## Workspace boundary
+
+All writes in a clean Git repository use job-scoped worktrees, including Direct and Native Ultra. An integration worktree combines approved commits. The original branch advances only when clean and still at the captured baseline; repeated application is idempotent. A concurrent branch advance preserves the integration worktree instead of forcing a merge.
+
+Dirty Git and non-Git workspaces serialize writes. Windows executable read tasks use a detached worktree or private copy with a deterministic content digest. Any read-snapshot mutation blocks cleanup and preserves evidence while leaving the original workspace unchanged.
+
+## External actions
+
+Original user authority is intersected with the plan. Push, deployment, and external writes register a stable action fingerprint. An external-capable invocation is not mechanically retried under a new session when the result is uncertain. A separate read-only Sol Max reconciliation classifies the target as completed, not applied, or still uncertain; only proven `not_applied` may be retried once.
+
+See [ADR 0002](adr/0002-windows-read-snapshot-isolation.md), [ADR 0003](adr/0003-speed-policy-before-planning.md), and [ADR 0004](adr/0004-temporary-controller-and-durable-controls.md).

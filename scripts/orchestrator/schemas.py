@@ -242,7 +242,20 @@ def apply_authority_ceiling(plan: dict[str, Any], task_text: str) -> dict[str, A
         "commit": any(token in text for token in ("implement", "修改", "创建", "修复", "提交", "build", "完成")),
         "push": any(token in text for token in ("push", "github", "三端同步", "推送")),
         "deploy": any(token in text for token in ("deploy", "部署", "上线", "服务器镜像", "三端同步")),
-        "external_write": any(token in text for token in ("cloudflare", " cf ", "服务器", "github", "部署", "推送", "外部")),
+        "external_write": any(
+            token in text
+            for token in (
+                "cloudflare",
+                " cf ",
+                "server",
+                "external",
+                "服务器",
+                "github",
+                "部署",
+                "推送",
+                "外部",
+            )
+        ),
     }
     for name, ceiling in ceilings.items():
         plan["permissions"][name] = bool(plan["permissions"][name] and ceiling)

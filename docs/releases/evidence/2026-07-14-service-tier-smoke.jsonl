@@ -1,0 +1,2 @@
+{"codex_cli":"0.144.0","direction":"client","event_type":"response.create","host":"chatgpt.com","model":"gpt-5.6-terra","path":"/backend-api/codex/responses","requested_service_tier":"priority"}
+{"codex_cli":"0.144.0","direction":"server","event_type":"response.completed","host":"chatgpt.com","model":"gpt-5.6-terra","observed_service_tier":"default","path":"/backend-api/codex/responses"}

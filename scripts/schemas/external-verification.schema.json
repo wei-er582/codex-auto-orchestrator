@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/wei-er582/codex-auto-orchestrator/schemas/external-verification.schema.json",
+  "title": "Read-only external action reconciliation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "task_id", "verdict", "summary", "evidence"],
+  "properties": {
+    "version": {"const": 1},
+    "task_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"},
+    "verdict": {"enum": ["completed", "not_applied", "uncertain"]},
+    "summary": {"type": "string", "minLength": 1},
+    "evidence": {"type": "array", "items": {"type": "string"}}
+  }
+}

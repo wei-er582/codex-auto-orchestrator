@@ -3,9 +3,11 @@ from __future__ import annotations
 import hashlib
 import os
 import shutil
+import subprocess
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from .util import run_text, safe_name
 
@@ -37,13 +39,17 @@ class ReadSnapshot:
 
 
 class WorkspaceManager:
-    def __init__(self, workspace: Path, job_id: str) -> None:
+    def __init__(self, workspace: Path, job_id: str, store: Any | None = None) -> None:
         self.requested_workspace = workspace.resolve()
         self.info = self.inspect(self.requested_workspace)
         self.job_id = safe_name(job_id, 48)
         self.temp_root = Path(tempfile.gettempdir()) / "codex-auto-orchestrator" / self.job_id
         self.worktrees: list[Worktree] = []
         self.read_snapshot: ReadSnapshot | None = None
+        self._protected_branches: set[str] = set()
+        self.store = store
+        if store is not None:
+            self._restore(store.read().get("workspace_resources", {}))
 
     @staticmethod
     def inspect(workspace: Path) -> GitInfo:
@@ -62,6 +68,9 @@ class WorkspaceManager:
             raise RuntimeError("isolated worktrees require a clean Git workspace")
         self.temp_root.mkdir(parents=True, exist_ok=True)
         normalized = safe_name(task_id, 40)
+        for existing in self.worktrees:
+            if existing.task_id == task_id and existing.path.exists():
+                return existing
         path = self.temp_root / normalized
         branch = f"codex-orch/{self.job_id}/{normalized}"
         run_text(
@@ -69,11 +78,15 @@ class WorkspaceManager:
         )
         worktree = Worktree(task_id, path, branch, self.info.head)
         self.worktrees.append(worktree)
+        self._persist()
         return worktree
 
     def create_integration_worktree(self) -> Worktree:
         if not self.info.is_git or self.info.dirty:
             raise RuntimeError("integration worktree requires a clean Git workspace")
+        for existing in self.worktrees:
+            if existing.integration and existing.path.exists():
+                return existing
         self.temp_root.mkdir(parents=True, exist_ok=True)
         path = self.temp_root / "integration"
         branch = f"codex-orch/{self.job_id}/integration"
@@ -82,11 +95,17 @@ class WorkspaceManager:
         )
         worktree = Worktree("integration", path, branch, self.info.head, integration=True)
         self.worktrees.append(worktree)
+        self._persist()
         return worktree
 
     def create_read_snapshot(self) -> ReadSnapshot:
-        if self.read_snapshot is not None:
+        if self.read_snapshot is not None and self.read_snapshot.path.exists():
             return self.read_snapshot
+        if self.read_snapshot is not None:
+            # A missing persisted snapshot cannot contain user changes. Clear the
+            # stale registry entry before rebuilding it from the current baseline.
+            self.read_snapshot = None
+            self._persist()
         self.temp_root.mkdir(parents=True, exist_ok=True)
         path = self.temp_root / "read-snapshot"
         if self.info.is_git and not self.info.dirty:
@@ -98,6 +117,7 @@ class WorkspaceManager:
             shutil.copytree(self.info.root, path, symlinks=True)
             managed_worktree = False
         self.read_snapshot = ReadSnapshot(path, managed_worktree, _tree_digest(path))
+        self._persist()
         return self.read_snapshot
 
     def verify_clean(self, worktree: Worktree) -> None:
@@ -111,10 +131,23 @@ class WorkspaceManager:
     def apply_integration(self, integration: Worktree) -> str:
         current = self.inspect(self.info.root)
         if current.dirty:
+            self._protected_branches.add(integration.branch)
             raise RuntimeError("original workspace changed during orchestration; integration was preserved")
-        if current.head != self.info.head:
-            raise RuntimeError("original branch advanced during orchestration; integration was preserved")
         self.verify_clean(integration)
+        integration_head = self.head(integration)
+        if current.head == integration_head:
+            return current.head
+        if current.head != self.info.head:
+            completed = subprocess.run(
+                ["git", "-C", str(self.info.root), "merge-base", "--is-ancestor", integration_head, current.head],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+            if completed.returncode == 0:
+                return current.head
+            self._protected_branches.add(integration.branch)
+            raise RuntimeError("original branch advanced during orchestration; integration was preserved")
         run_text(["git", "-C", str(self.info.root), "merge", "--ff-only", integration.branch])
         return run_text(["git", "-C", str(self.info.root), "rev-parse", "HEAD"])
 
@@ -126,12 +159,18 @@ class WorkspaceManager:
     def cleanup(self) -> list[str]:
         preserved: list[str] = []
         for worktree in reversed(self.worktrees):
+            if worktree.branch in self._protected_branches:
+                preserved.append(str(worktree.path))
+                continue
             try:
                 self.verify_clean(worktree)
             except RuntimeError:
                 preserved.append(str(worktree.path))
                 continue
             run_text(["git", "-C", str(self.info.root), "worktree", "remove", str(worktree.path)], check=False)
+            self._remove_empty_managed_path(worktree.path)
+            if worktree.path.exists():
+                preserved.append(str(worktree.path))
         run_text(["git", "-C", str(self.info.root), "worktree", "prune"], check=False)
         for worktree in self.worktrees:
             if str(worktree.path) in preserved:
@@ -147,6 +186,9 @@ class WorkspaceManager:
                     check=False,
                 )
                 run_text(["git", "-C", str(self.info.root), "worktree", "prune"], check=False)
+                self._remove_empty_managed_path(snapshot.path)
+                if snapshot.path.exists():
+                    preserved.append(str(snapshot.path))
             else:
                 resolved = snapshot.path.resolve()
                 temp_root = self.temp_root.resolve()
@@ -154,7 +196,70 @@ class WorkspaceManager:
                     raise RuntimeError(f"refusing to remove read snapshot outside temp root: {resolved}")
                 shutil.rmtree(resolved)
         self._remove_empty_temp_root(preserved)
+        self._persist()
         return preserved
+
+    def workspace_fingerprint(self) -> dict[str, str]:
+        if self.info.is_git:
+            current = self.inspect(self.info.root)
+            diff = run_text(["git", "-C", str(self.info.root), "diff", "--binary"], check=False)
+            return {
+                "head": current.head,
+                "porcelain": current.porcelain,
+                "diff_sha256": hashlib.sha256(diff.encode("utf-8")).hexdigest(),
+            }
+        return {"tree_sha256": _tree_digest(self.info.root)}
+
+    def _restore(self, resources: dict[str, Any]) -> None:
+        for item in resources.get("worktrees", []) if isinstance(resources, dict) else []:
+            try:
+                worktree = Worktree(
+                    task_id=str(item["task_id"]),
+                    path=Path(item["path"]),
+                    branch=str(item["branch"]),
+                    base_head=str(item["base_head"]),
+                    integration=bool(item.get("integration", False)),
+                )
+            except (KeyError, TypeError):
+                continue
+            self.worktrees.append(worktree)
+        snapshot = resources.get("read_snapshot") if isinstance(resources, dict) else None
+        if isinstance(snapshot, dict):
+            try:
+                self.read_snapshot = ReadSnapshot(
+                    Path(snapshot["path"]),
+                    bool(snapshot["managed_worktree"]),
+                    str(snapshot["baseline_digest"]),
+                )
+            except (KeyError, TypeError):
+                self.read_snapshot = None
+
+    def _persist(self) -> None:
+        if self.store is None:
+            return
+        resources = {
+            "worktrees": [
+                {
+                    "task_id": item.task_id,
+                    "path": str(item.path),
+                    "branch": item.branch,
+                    "base_head": item.base_head,
+                    "integration": item.integration,
+                }
+                for item in self.worktrees
+                if item.path.exists()
+            ],
+            "read_snapshot": (
+                {
+                    "path": str(self.read_snapshot.path),
+                    "managed_worktree": self.read_snapshot.managed_worktree,
+                    "baseline_digest": self.read_snapshot.baseline_digest,
+                }
+                if self.read_snapshot is not None and self.read_snapshot.path.exists()
+                else None
+            ),
+        }
+        self.store.set_workspace_resources(resources)
 
     def _remove_empty_temp_root(self, preserved: list[str]) -> None:
         orchestrator_temp = (Path(tempfile.gettempdir()) / "codex-auto-orchestrator").resolve()
@@ -171,6 +276,19 @@ class WorkspaceManager:
             orchestrator_temp.rmdir()
         except OSError:
             # Other concurrent or preserved jobs may still own the shared parent.
+            pass
+
+    def _remove_empty_managed_path(self, path: Path) -> None:
+        if not path.exists():
+            return
+        resolved = path.resolve()
+        temp_root = self.temp_root.resolve()
+        if resolved.parent != temp_root:
+            raise RuntimeError(f"refusing to remove managed path outside job temp root: {resolved}")
+        try:
+            resolved.rmdir()
+        except OSError:
+            # Non-empty content is evidence and will be preserved by the caller.
             pass
 
 

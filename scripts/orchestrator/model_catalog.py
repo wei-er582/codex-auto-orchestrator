@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import re
 import subprocess
 from dataclasses import dataclass
@@ -15,6 +16,19 @@ class ModelInfo:
     efforts: tuple[str, ...]
     default_effort: str
     multi_agent_version: str | None
+    service_tiers: tuple[str, ...]
+
+    @property
+    def family(self) -> str:
+        if "sol" in self.slug.lower():
+            return "sol"
+        if "terra" in self.slug.lower():
+            return "terra"
+        return "other"
+
+    @property
+    def supports_fast(self) -> bool:
+        return "priority" in self.service_tiers
 
 
 class ModelCatalog:
@@ -59,6 +73,11 @@ class ModelCatalog:
                 efforts=efforts,
                 default_effort=item.get("default_reasoning_level", "medium"),
                 multi_agent_version=item.get("multi_agent_version"),
+                service_tiers=tuple(
+                    str(tier.get("id"))
+                    for tier in item.get("service_tiers", [])
+                    if isinstance(tier, dict) and tier.get("id")
+                ),
             )
         return cls(models, source)
 
@@ -76,14 +95,48 @@ class ModelCatalog:
     def preferred_terra(self) -> str:
         return self._preferred("terra", required_effort="medium")
 
+    def preferred_for_family(self, family: str) -> str:
+        if family == "sol":
+            return self.preferred_sol()
+        if family == "terra":
+            return self.preferred_terra()
+        raise ValueError(f"unsupported model family: {family}")
+
+    def family_for_model(self, model: str) -> str:
+        return self.models[model].family
+
+    def speed_matrix_catalog(self) -> dict[str, dict[str, object]]:
+        matrix: dict[str, dict[str, object]] = {}
+        for family in ("sol", "terra"):
+            model = self.preferred_for_family(family)
+            info = self.models[model]
+            matrix[family] = {
+                "model": model,
+                "efforts": list(info.efforts),
+                "fast_supported": info.supports_fast,
+                "service_tiers": list(info.service_tiers),
+            }
+        return matrix
+
+    def speed_combinations(self) -> set[str]:
+        combinations: set[str] = set()
+        for family, item in self.speed_matrix_catalog().items():
+            model = str(item["model"])
+            for effort in item["efforts"]:
+                combinations.add(f"{family}:{model}:{effort}")
+        return combinations
+
+    def fingerprint(self) -> str:
+        payload = json.dumps(
+            self.speed_matrix_catalog(), ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        )
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
     def _preferred(self, token: str, required_effort: str) -> str:
         candidates = [m for m in self.models.values() if token in m.slug and required_effort in m.efforts]
         if candidates:
             return max(candidates, key=lambda item: _model_rank(item.slug)).slug
-        candidates = [m for m in self.models.values() if required_effort in m.efforts]
-        if not candidates:
-            raise ValueError(f"no available model supports {required_effort}")
-        return max(candidates, key=lambda item: _model_rank(item.slug)).slug
+        raise ValueError(f"no available {token.title()} model supports {required_effort}")
 
     def prompt_summary(self) -> list[dict[str, object]]:
         return [
@@ -92,6 +145,7 @@ class ModelCatalog:
                 "description": item.description,
                 "efforts": list(item.efforts),
                 "multi_agent_version": item.multi_agent_version or "none",
+                "service_tiers": list(item.service_tiers),
             }
             for item in self.models.values()
         ]

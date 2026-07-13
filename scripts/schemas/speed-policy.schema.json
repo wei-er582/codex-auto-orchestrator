@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/wei-er582/codex-auto-orchestrator/schemas/speed-policy.schema.json",
+  "title": "Codex Auto Orchestrator job speed policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "profile_name",
+    "matrix",
+    "model_bindings",
+    "catalog_fingerprint",
+    "known_combinations",
+    "source",
+    "revision",
+    "created_at"
+  ],
+  "properties": {
+    "version": {"const": 1},
+    "profile_name": {"type": "string", "minLength": 1},
+    "matrix": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sol", "terra"],
+      "properties": {
+        "sol": {"$ref": "#/$defs/family"},
+        "terra": {"$ref": "#/$defs/family"}
+      }
+    },
+    "model_bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sol", "terra"],
+      "properties": {
+        "sol": {"type": "string", "minLength": 1},
+        "terra": {"type": "string", "minLength": 1}
+      }
+    },
+    "catalog_fingerprint": {"type": "string", "minLength": 1},
+    "known_combinations": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "source": {"type": "string", "minLength": 1},
+    "revision": {"type": "integer", "minimum": 1},
+    "created_at": {"type": "string", "minLength": 1}
+  },
+  "$defs": {
+    "family": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"enum": ["default", "priority"]}
+    }
+  }
+}

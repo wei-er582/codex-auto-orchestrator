@@ -12,4 +12,6 @@ Reasoning levels `low` through `max` represent increasing single-agent depth. `u
 
 Use Terra Ultra for coordination-heavy everyday work with clear product boundaries. Use Sol Ultra for frontier, architectural, ambiguous, or high-risk coordination. Environment and permission failures never justify a model escalation.
 
-On Windows, executable `access=read` tasks use a disposable snapshot by default. The original workspace is not their current directory; any snapshot content change blocks cleanup and is preserved as evidence. Parallel `access=write` tasks still require separate Git worktrees.
+On Windows, executable `access=read` tasks use a disposable snapshot by default. The original workspace is not their current directory; any snapshot content change blocks cleanup and is preserved as evidence. Every write task in a clean Git repository, including Direct and Native Ultra, uses an isolated worktree. Dirty Git and non-Git workspaces serialize writes and record fingerprints.
+
+Each planner, worker, escalation, Ultra call, repair, and reviewer looks up `service_tier` from the job's immutable speed-policy revision using its actual model family and reasoning effort. Fast failure changes only the service tier, never the reasoning escalation path.
